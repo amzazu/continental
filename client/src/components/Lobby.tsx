@@ -248,7 +248,7 @@ function Header() {
   return (
     <header className="lobby-header">
       <h1>Continental</h1>
-      <p className="memorial">In loving memory of Abuela Conchita ♥</p>
+      <p className="memorial">In loving memory of Abuela Conchita</p>
     </header>
   );
 }

@@ -5,14 +5,13 @@
     "moduleResolution": "nodenext",
     "noImplicitReturns": true,
     "noUnusedLocals": true,
+    "rootDir": "src",
     "outDir": "lib",
     "sourceMap": true,
     "strict": true,
     "target": "es2017"
   },
   "compileOnSave": true,
-  "include": [
-    "src",
-    "../shared"
-  ]
+  "include": ["src"],
+  "references": [{ "path": "../shared" }]
 }

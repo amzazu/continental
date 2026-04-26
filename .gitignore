@@ -49,6 +49,8 @@ node_modules/
 
 # TypeScript compiled output
 functions/lib/
+shared/*.js
+shared/*.d.ts
 
 # Build artifacts
 dist/
