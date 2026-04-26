@@ -1,9 +1,5 @@
 import { create } from "zustand";
-import {
-  signInAnonymously,
-  onAuthStateChanged,
-  type User,
-} from "firebase/auth";
+import { signInAnonymously, onAuthStateChanged, type User } from "firebase/auth";
 import { auth } from "../lib/firebase";
 
 const DISPLAY_NAME_KEY = "continental_display_name";
@@ -13,7 +9,6 @@ interface AuthState {
   loading: boolean;
   displayName: string;
   init: () => () => void;
-  signIn: () => Promise<void>;
   setDisplayName: (name: string) => void;
 }
 
@@ -22,15 +17,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   loading: true,
   displayName: localStorage.getItem(DISPLAY_NAME_KEY) ?? "",
 
-  // Call once at app startup. Returns the Firebase unsubscribe function.
   init: () =>
-    onAuthStateChanged(auth, (user) => {
-      set({ user, loading: false });
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        set({ user, loading: false });
+      } else {
+        // No session — create an anonymous one silently
+        try {
+          await signInAnonymously(auth);
+          // onAuthStateChanged fires again with the new user
+        } catch {
+          set({ loading: false });
+        }
+      }
     }),
-
-  signIn: async () => {
-    await signInAnonymously(auth);
-  },
 
   setDisplayName: (name) => {
     localStorage.setItem(DISPLAY_NAME_KEY, name);

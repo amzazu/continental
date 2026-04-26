@@ -6,17 +6,11 @@ import { useAuthStore } from "./store/authStore.ts";
 
 function Root() {
   const init = useAuthStore((s) => s.init);
-  const signIn = useAuthStore((s) => s.signIn);
 
   useEffect(() => {
     const unsubscribe = init();
     return unsubscribe;
   }, [init]);
-
-  // Ensure every visitor has a Firebase anonymous identity immediately
-  useEffect(() => {
-    signIn();
-  }, [signIn]);
 
   return <App />;
 }
