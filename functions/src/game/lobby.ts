@@ -115,7 +115,8 @@ export const startGame = onCall(async (request) => {
   if (game.phase !== "lobby") {
     throw new HttpsError("failed-precondition", "Game has already started.");
   }
-  if (game.playerCount < 3) {
+  const minPlayers = process.env.FUNCTIONS_EMULATOR ? 1 : 3;
+  if (game.playerCount < minPlayers) {
     throw new HttpsError("failed-precondition", "Need at least 3 players to start.");
   }
 

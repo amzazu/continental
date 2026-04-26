@@ -26,8 +26,9 @@ export default function Lobby() {
     (a, b) => a.seatOrder - b.seatOrder
   );
   const isHost = game?.hostUid === user?.uid;
-  const canStart = sortedPlayers.length >= 3;
-  const needed = Math.max(0, 3 - sortedPlayers.length);
+  const minPlayers = import.meta.env.DEV ? 1 : 3;
+  const canStart = sortedPlayers.length >= minPlayers;
+  const needed = Math.max(0, minPlayers - sortedPlayers.length);
 
   function validateName(): boolean {
     if (!displayName.trim()) {
