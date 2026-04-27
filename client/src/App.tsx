@@ -1,6 +1,7 @@
 import { useAuthStore } from "./store/authStore";
 import { useGameStore } from "./store/gameStore";
 import Lobby from "./components/Lobby";
+import Board from "./components/Board";
 
 export default function App() {
   const loading = useAuthStore((s) => s.loading);
@@ -14,13 +15,8 @@ export default function App() {
     );
   }
 
-  // Once the game is active the lobby hands off to the game board (coming soon)
   if (game && game.phase !== "lobby") {
-    return (
-      <div className="app-loading">
-        <p>Game starting… (board coming soon)</p>
-      </div>
-    );
+    return <Board />;
   }
 
   return <Lobby />;

@@ -9,7 +9,7 @@ import {
   ROUND_CONFIGS,
 } from "../../../shared/types.js";
 import { validateContract, validateAddToMeld, validateReplaceJoker } from "./meld-validator.js";
-import { drawCardFromDeck, endRound } from "./round.js";
+import { drawCardFromDeck, endRound, PlayerEndData } from "./round.js";
 import { nextPlayer } from "./helpers.js";
 
 // ─── drawCard ─────────────────────────────────────────────────────────────────
@@ -80,6 +80,18 @@ export const goDown = onCall(async (request) => {
     if (game.turnState.phase === "draw") throw new HttpsError("failed-precondition", "Must draw first.");
     if (playerData.isDown) throw new HttpsError("failed-precondition", "Already down.");
 
+    // Pre-read non-winner docs before any writes (Firestore: reads must precede writes)
+    const nonWinnerUids = game.turnOrder.filter((u) => u !== uid);
+    const [nonWinnerPlayerSnaps, nonWinnerHandSnaps] = await Promise.all([
+      Promise.all(nonWinnerUids.map((u) => tx.get(db.doc(`games/${gameId}/players/${u}`)))),
+      Promise.all(nonWinnerUids.map((u) => tx.get(db.doc(`games/${gameId}/hands/${u}`)))),
+    ]);
+    const nonWinnerData: PlayerEndData[] = nonWinnerUids.map((u, i) => ({
+      uid: u,
+      player: nonWinnerPlayerSnaps[i].data() as PlayerDoc,
+      hand: (nonWinnerHandSnaps[i].data() as HandDoc).hand,
+    }));
+
     // Resolve card IDs → card objects from hand
     const handById = new Map(handData.hand.map((c) => [c.id, c]));
     const groups: Card[][] = cardGroups.map((group, i) =>
@@ -118,18 +130,18 @@ export const goDown = onCall(async (request) => {
       } as Meld)),
     ];
 
-    if (handAfterDown.length === 1) {
-      // Auto-discard last card and end the round
-      const discardCard = handAfterDown[0];
+    if (handAfterDown.length === 0 || handAfterDown.length === 1) {
+      // 0 cards: went out exactly; 1 card: auto-discard the last card
+      const discardCard = handAfterDown[0] ?? null;
 
       tx.update(handRef, { hand: [], floatingJokers: [] });
       tx.update(playerRef, { isDown: true, handSize: 0 });
       tx.update(gameRef, {
         melds: newMelds,
-        discardPile: [discardCard, ...game.discardPile],
+        ...(discardCard && { discardPile: [discardCard, ...game.discardPile] }),
       } as Partial<GameDoc>);
 
-      await endRound(tx, gameId, game, uid);
+      endRound(tx, gameId, game, uid, playerData.totalScore, nonWinnerData);
     } else {
       tx.update(handRef, { hand: handAfterDown });
       tx.update(playerRef, { isDown: true, handSize: handAfterDown.length });
@@ -367,12 +379,24 @@ export const discard = onCall(async (request) => {
     const newDiscardPile = [card, ...game.discardPile];
 
     if (playerData.isDown && newHand.length === 0) {
+      // Pre-read non-winner docs before writing (Firestore: reads must precede writes)
+      const nonWinnerUids = game.turnOrder.filter((u) => u !== uid);
+      const [nonWinnerPlayerSnaps, nonWinnerHandSnaps] = await Promise.all([
+        Promise.all(nonWinnerUids.map((u) => tx.get(db.doc(`games/${gameId}/players/${u}`)))),
+        Promise.all(nonWinnerUids.map((u) => tx.get(db.doc(`games/${gameId}/hands/${u}`)))),
+      ]);
+      const nonWinnerData: PlayerEndData[] = nonWinnerUids.map((u, i) => ({
+        uid: u,
+        player: nonWinnerPlayerSnaps[i].data() as PlayerDoc,
+        hand: (nonWinnerHandSnaps[i].data() as HandDoc).hand,
+      }));
+
       // Going out — end the round
       tx.update(handRef, { hand: [], floatingJokers: [] });
       tx.update(playerRef, { handSize: 0 } as Partial<PlayerDoc>);
       tx.update(gameRef, { discardPile: newDiscardPile } as Partial<GameDoc>);
 
-      await endRound(tx, gameId, game, uid);
+      endRound(tx, gameId, game, uid, playerData.totalScore, nonWinnerData);
     } else {
       // Normal discard — start offer chain for next player
       const nextUid = nextPlayer(game.turnOrder, uid);

@@ -5,8 +5,10 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      '@shared': path.resolve(__dirname, '../shared'),
-    },
+    alias: [
+      // Must come before the general @shared alias so it matches first
+      { find: '@shared/types', replacement: path.resolve(__dirname, '../shared/types.ts') },
+      { find: '@shared', replacement: path.resolve(__dirname, '../shared') },
+    ],
   },
 })

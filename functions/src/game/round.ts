@@ -9,6 +9,12 @@ import {
   OfferState,
   ROUND_CONFIGS,
 } from "../../../shared/types.js";
+
+export interface PlayerEndData {
+  uid: string;
+  player: PlayerDoc;
+  hand: Card[];
+}
 import { buildShuffledDeck, dealRound } from "./deck.js";
 import { scoreHand } from "./scoring.js";
 
@@ -93,44 +99,28 @@ export async function beginRound(
 // Internal: scores all players and transitions to round_end or game_over.
 // Must be called from within a transaction; all reads must have been done first.
 
-export async function endRound(
+// All reads must be done before calling endRound — pass pre-fetched data.
+// winnerTotalScore: the winner's current totalScore (round score is 0).
+// nonWinnerData: pre-fetched hand + player docs for everyone else.
+export function endRound(
   tx: FirebaseFirestore.Transaction,
   gameId: string,
   game: GameDoc,
-  winnerUid: string
-): Promise<void> {
-  const nonWinners = game.turnOrder.filter((uid) => uid !== winnerUid);
-
-  const [handSnaps, playerSnaps] = await Promise.all([
-    Promise.all(
-      nonWinners.map((uid) => tx.get(db.doc(`games/${gameId}/hands/${uid}`)))
-    ),
-    Promise.all(
-      nonWinners.map((uid) => tx.get(db.doc(`games/${gameId}/players/${uid}`)))
-    ),
-  ]);
-
-  // Score non-winners
-  for (let i = 0; i < nonWinners.length; i++) {
-    const uid = nonWinners[i];
-    const hand = (handSnaps[i].data() as HandDoc).hand;
-    const player = playerSnaps[i].data() as PlayerDoc;
+  winnerUid: string,
+  winnerTotalScore: number,
+  nonWinnerData: PlayerEndData[]
+): void {
+  for (const { uid, hand, player } of nonWinnerData) {
     const roundScore = scoreHand(hand);
-
     tx.update(db.doc(`games/${gameId}/players/${uid}`), {
       roundScore,
       totalScore: player.totalScore + roundScore,
     });
   }
 
-  // Winner scores 0
-  const winnerPlayerSnap = await tx.get(
-    db.doc(`games/${gameId}/players/${winnerUid}`)
-  );
-  const winnerPlayer = winnerPlayerSnap.data() as PlayerDoc;
   tx.update(db.doc(`games/${gameId}/players/${winnerUid}`), {
     roundScore: 0,
-    totalScore: winnerPlayer.totalScore,
+    totalScore: winnerTotalScore,
   });
 
   tx.update(db.doc(`games/${gameId}`), {
