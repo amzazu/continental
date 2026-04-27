@@ -147,3 +147,27 @@ export interface HandDoc {
 export interface DeckDoc {
   cards: Card[];
 }
+
+// ─── Game log ─────────────────────────────────────────────────────────────────
+
+// /games/{gameId}/log/{auto-id}  — readable by all players in the game
+
+export type LogEventType =
+  | "round_start"
+  | "draw"
+  | "discard"
+  | "offer_accepted"
+  | "go_down"
+  | "add_to_meld"
+  | "replace_joker"
+  | "round_end";
+
+export interface LogEntry {
+  ts: number;               // epoch ms — used for ordering
+  type: LogEventType;
+  uid: string;              // acting player uid; "" for system events (round_start)
+  card?: Card;              // discard, offer_accepted, replace_joker
+  cardCount?: number;       // go_down (cards melded), add_to_meld (cards added)
+  round?: number;           // round_start, round_end
+  isFree?: boolean;         // offer_accepted: whether the taker paid a penalty
+}

@@ -11,6 +11,7 @@ import {
 import { validateContract, validateAddToMeld, validateReplaceJoker } from "./meld-validator.js";
 import { drawCardFromDeck, endRound, PlayerEndData } from "./round.js";
 import { nextPlayer } from "./helpers.js";
+import { logEvent } from "./log.js";
 
 // ─── drawCard ─────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ export const drawCard = onCall(async (request) => {
       deckSize: newDeckSize,
       turnState: { uid, phase: "action", floatingJokerCount: 0 },
     } as Partial<GameDoc>);
+    logEvent(tx, gameId, { type: "draw", uid });
   });
 });
 
@@ -130,6 +132,8 @@ export const goDown = onCall(async (request) => {
       } as Meld)),
     ];
 
+    logEvent(tx, gameId, { type: "go_down", uid, cardCount: usedIds.size });
+
     if (handAfterDown.length === 0 || handAfterDown.length === 1) {
       // 0 cards: went out exactly; 1 card: auto-discard the last card
       const discardCard = handAfterDown[0] ?? null;
@@ -207,6 +211,7 @@ export const addToMeld = onCall(async (request) => {
     tx.update(handRef, { hand: newHand });
     tx.update(playerRef, { handSize: newHand.length } as Partial<PlayerDoc>);
     tx.update(gameRef, { melds: newMelds } as Partial<GameDoc>);
+    logEvent(tx, gameId, { type: "add_to_meld", uid, cardCount: cardIds.length });
   });
 });
 
@@ -276,6 +281,7 @@ export const replaceJoker = onCall(async (request) => {
         floatingJokerCount: newFloatingJokers.length,
       },
     } as Partial<GameDoc>);
+    logEvent(tx, gameId, { type: "replace_joker", uid, card: naturalCard });
   });
 });
 
@@ -377,6 +383,8 @@ export const discard = onCall(async (request) => {
     const card = handData.hand[cardIdx];
     const newHand = handData.hand.filter((_, i) => i !== cardIdx);
     const newDiscardPile = [card, ...game.discardPile];
+
+    logEvent(tx, gameId, { type: "discard", uid, card });
 
     if (playerData.isDown && newHand.length === 0) {
       // Pre-read non-winner docs before writing (Firestore: reads must precede writes)

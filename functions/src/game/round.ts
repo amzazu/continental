@@ -17,6 +17,7 @@ export interface PlayerEndData {
 }
 import { buildShuffledDeck, dealRound } from "./deck.js";
 import { scoreHand } from "./scoring.js";
+import { logEvent } from "./log.js";
 
 // ─── beginRound ───────────────────────────────────────────────────────────────
 // Internal: transitions the game into the start-of-round offer phase.
@@ -92,6 +93,8 @@ export async function beginRound(
     turnState: null,
   } as Partial<GameDoc>);
 
+  logEvent(batch, gameId, { type: "round_start", uid: "", round: roundNumber });
+
   await batch.commit();
 }
 
@@ -128,6 +131,8 @@ export function endRound(
     turnState: null,
     offerState: null,
   });
+
+  logEvent(tx, gameId, { type: "round_end", uid: winnerUid, round: game.round });
 }
 
 // ─── startNextRound ───────────────────────────────────────────────────────────

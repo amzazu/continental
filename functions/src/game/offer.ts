@@ -3,6 +3,7 @@ import { db } from "../admin.js";
 import { GameDoc, HandDoc, PlayerDoc } from "../../../shared/types.js";
 import { previousPlayer, nextInOfferChain } from "./helpers.js";
 import { drawCardFromDeck } from "./round.js";
+import { logEvent } from "./log.js";
 
 export const respondToOffer = onCall(async (request) => {
   const uid = request.auth?.uid;
@@ -38,6 +39,8 @@ export const respondToOffer = onCall(async (request) => {
       const handRef = db.doc(`games/${gameId}/hands/${uid}`);
       const handSnap = await tx.get(handRef);
       const handData = handSnap.data() as HandDoc;
+
+      logEvent(tx, gameId, { type: "offer_accepted", uid, card: offer.card, isFree: offer.isFree });
 
       if (offer.isFree) {
         // Next player takes the discard at no cost — draw phase is satisfied

@@ -38,6 +38,12 @@ service cloud.firestore {
         allow write: if false;
       }
 
+      // Game event log — readable by all players in the game.
+      match /log/{entry} {
+        allow read: if isPlayerInGame(gameId);
+        allow write: if false;
+      }
+
       // Server-only data (deck). The admin SDK bypasses these rules,
       // so Cloud Functions can still read/write. No client ever can.
       match /private/{document=**} {
