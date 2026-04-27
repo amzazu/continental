@@ -773,12 +773,6 @@ function MeldView({
 
 // ── GameLog ───────────────────────────────────────────────────────────────────
 
-const SUIT_SYM_LOG: Record<string, string> = { S: "♠", H: "♥", D: "♦", C: "♣" };
-
-function cardLabel(card: Card): string {
-  return card.rank === "JOKER" ? "Joker" : `${card.rank}${SUIT_SYM_LOG[card.suit] ?? ""}`;
-}
-
 function formatEntry(
   entry: LogEntry,
   players: Record<string, PlayerDoc>,
