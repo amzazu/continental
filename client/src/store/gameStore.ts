@@ -16,7 +16,7 @@ interface GameState {
   game: GameDoc | null;
   players: Record<string, PlayerDoc>; // uid → PlayerDoc
   myHand: HandDoc | null;
-  log: LogEntry[]; // newest first
+  lastEvent: LogEntry | null;
 
   subscribe: (gameId: string, myUid: string) => void;
   unsubscribe: () => void;
@@ -30,14 +30,14 @@ export const useGameStore = create<GameState>((set) => ({
   game: null,
   players: {},
   myHand: null,
-  log: [],
+  lastEvent: null,
 
   subscribe: (gameId, myUid) => {
     // Clean up any existing listeners first
     _unsubs.forEach((fn) => fn());
     _unsubs = [];
 
-    set({ gameId, game: null, players: {}, myHand: null, log: [] });
+    set({ gameId, game: null, players: {}, myHand: null, lastEvent: null });
 
     // 1. Main game document
     _unsubs.push(
@@ -64,16 +64,16 @@ export const useGameStore = create<GameState>((set) => ({
       })
     );
 
-    // 4. Game log (newest first, last 60 entries)
+    // 4. Most recent game event
     _unsubs.push(
       onSnapshot(
         query(
           collection(db, "games", gameId, "log"),
           orderBy("ts", "desc"),
-          limit(60)
+          limit(1)
         ),
         (snap) => {
-          set({ log: snap.docs.map((d) => d.data() as LogEntry) });
+          set({ lastEvent: snap.empty ? null : (snap.docs[0].data() as LogEntry) });
         }
       )
     );
@@ -82,6 +82,6 @@ export const useGameStore = create<GameState>((set) => ({
   unsubscribe: () => {
     _unsubs.forEach((fn) => fn());
     _unsubs = [];
-    set({ gameId: null, game: null, players: {}, myHand: null, log: [] });
+    set({ gameId: null, game: null, players: {}, myHand: null, lastEvent: null });
   },
 }));

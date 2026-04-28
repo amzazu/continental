@@ -709,38 +709,20 @@ input::placeholder {
   transform: translateY(-2px);
 }
 
-/* ─── Game log ──────────────────────────────────────────────────────────── */
+/* ─── Last event ticker ─────────────────────────────────────────────────── */
 
-.board-log {
+.board-last-event {
   flex-shrink: 0;
-  max-height: 88px;
-  overflow-y: auto;
-  padding: 0.3rem 0.75rem;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.72rem;
+  color: rgba(245, 240, 232, 0.5);
   background: rgba(0, 0, 0, 0.18);
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(201, 168, 76, 0.15) transparent;
-}
-
-.log-entry {
-  font-size: 0.7rem;
-  line-height: 1.55;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.log-dim    { color: rgba(245, 240, 232, 0.3); }
-.log-normal { color: rgba(245, 240, 232, 0.6); }
-.log-highlight { color: var(--cream); font-weight: 600; }
-.log-system {
-  color: var(--gold);
   text-align: center;
-  font-size: 0.65rem;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 0.15rem 0;
 }
 
 /* ─── Hand area ─────────────────────────────────────────────────────────── */

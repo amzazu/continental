@@ -80,7 +80,7 @@ export default function Board() {
   const game = useGameStore((s) => s.game);
   const players = useGameStore((s) => s.players);
   const myHand = useGameStore((s) => s.myHand);
-  const log = useGameStore((s) => s.log);
+  const lastEvent = useGameStore((s) => s.lastEvent);
 
   const [uiMode, setUiMode] = useState<UiMode>("normal");
   const [selectedCardIds, setSelectedCardIds] = useState<Set<string>>(new Set());
@@ -440,8 +440,8 @@ export default function Board() {
         )}
       </div>
 
-      {/* Game log */}
-      <GameLog entries={log} players={players} myUid={myUid ?? ""} />
+      {/* Last event ticker */}
+      <LastEvent entry={lastEvent} players={players} myUid={myUid ?? ""} />
 
       {/* Hand area */}
       <div className="board-hand-area">
@@ -771,13 +771,13 @@ function MeldView({
   );
 }
 
-// ── GameLog ───────────────────────────────────────────────────────────────────
+// ── LastEvent ─────────────────────────────────────────────────────────────────
 
-function formatEntry(
+function formatEvent(
   entry: LogEntry,
   players: Record<string, PlayerDoc>,
   myUid: string
-): { text: string; cls: string } {
+): string {
   const name = (uid: string) => {
     if (!uid) return "";
     const p = players[uid];
@@ -786,64 +786,36 @@ function formatEntry(
   };
 
   switch (entry.type) {
-    case "round_start":
-      return { text: `— Round ${entry.round} started —`, cls: "log-system" };
-    case "round_end":
-      return { text: `${name(entry.uid)} went out! Round ${entry.round} over.`, cls: "log-highlight" };
-    case "draw":
-      return { text: `${name(entry.uid)} drew a card`, cls: "log-dim" };
-    case "discard":
-      return { text: `${name(entry.uid)} discarded ${entry.card ? cardLabel(entry.card) : ""}`, cls: "log-normal" };
+    case "round_start":   return `Round ${entry.round} started`;
+    case "round_end":     return `${name(entry.uid)} went out`;
+    case "draw":          return `${name(entry.uid)} drew a card`;
+    case "discard":       return `${name(entry.uid)} discarded ${entry.card ? cardLabel(entry.card) : ""}`;
     case "offer_accepted":
       return entry.isFree
-        ? { text: `${name(entry.uid)} took ${entry.card ? cardLabel(entry.card) : "the discard"}`, cls: "log-normal" }
-        : { text: `${name(entry.uid)} bought in (${entry.card ? cardLabel(entry.card) : "discard"})`, cls: "log-normal" };
-    case "go_down":
-      return { text: `${name(entry.uid)} went down!`, cls: "log-highlight" };
-    case "add_to_meld":
-      return {
-        text: `${name(entry.uid)} added ${entry.cardCount ?? ""} card${entry.cardCount === 1 ? "" : "s"} to a meld`,
-        cls: "log-normal",
-      };
-    case "replace_joker":
-      return {
-        text: `${name(entry.uid)} replaced a joker with ${entry.card ? cardLabel(entry.card) : "a card"}`,
-        cls: "log-normal",
-      };
-    default:
-      return { text: "", cls: "log-dim" };
+        ? `${name(entry.uid)} took the ${entry.card ? cardLabel(entry.card) : "discard"}`
+        : `${name(entry.uid)} bought in with the ${entry.card ? cardLabel(entry.card) : "discard"}`;
+    case "go_down":       return `${name(entry.uid)} went down`;
+    case "add_to_meld":   return `${name(entry.uid)} added to a meld`;
+    case "replace_joker": return `${name(entry.uid)} swapped a joker for ${entry.card ? cardLabel(entry.card) : "a card"}`;
+    default:              return "";
   }
 }
 
-function GameLog({
-  entries,
+function LastEvent({
+  entry,
   players,
   myUid,
 }: {
-  entries: LogEntry[];
+  entry: LogEntry | null;
   players: Record<string, PlayerDoc>;
   myUid: string;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-
-  // Scroll to top when new entries arrive (newest is at top)
-  useEffect(() => {
-    ref.current?.scrollTo({ top: 0, behavior: "smooth" });
-  }, [entries.length]);
-
-  if (entries.length === 0) return null;
-
+  if (!entry) return null;
+  const text = formatEvent(entry, players, myUid);
+  if (!text) return null;
   return (
-    <div className="board-log" ref={ref}>
-      {entries.map((entry, i) => {
-        const { text, cls } = formatEntry(entry, players, myUid);
-        if (!text) return null;
-        return (
-          <div key={`${entry.ts}-${i}`} className={`log-entry ${cls}`}>
-            {text}
-          </div>
-        );
-      })}
+    <div className="board-last-event" key={entry.ts}>
+      {text}
     </div>
   );
 }
