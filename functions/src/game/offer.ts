@@ -40,8 +40,6 @@ export const respondToOffer = onCall(async (request) => {
       const handSnap = await tx.get(handRef);
       const handData = handSnap.data() as HandDoc;
 
-      logEvent(tx, gameId, { type: "offer_accepted", uid, card: offer.card, isFree: offer.isFree });
-
       if (offer.isFree) {
         // Next player takes the discard at no cost — draw phase is satisfied
         tx.update(handRef, { hand: [...handData.hand, offer.card] });
@@ -55,8 +53,9 @@ export const respondToOffer = onCall(async (request) => {
           turnState: { uid, phase: "action", floatingJokerCount: 0 },
           currentTurnUid: uid,
         } as Partial<GameDoc>);
+        logEvent(tx, gameId, { type: "offer_accepted", uid, card: offer.card, isFree: true });
       } else {
-        // Penalty taker: gets the discard + 1 from the deck
+        // Penalty taker: all reads must precede writes — drawCardFromDeck does a tx.get
         const { card: penaltyCard, newDeckSize } = await drawCardFromDeck(
           tx,
           gameId,
@@ -82,6 +81,7 @@ export const respondToOffer = onCall(async (request) => {
             floatingJokerCount: 0,
           },
         } as Partial<GameDoc>);
+        logEvent(tx, gameId, { type: "offer_accepted", uid, card: offer.card, isFree: false });
       }
     } else {
       // Decline — advance the offer chain
